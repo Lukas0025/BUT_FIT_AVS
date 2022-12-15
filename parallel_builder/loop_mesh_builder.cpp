@@ -18,8 +18,7 @@
 LoopMeshBuilder::LoopMeshBuilder(unsigned gridEdgeSize)
     : BaseMeshBuilder(gridEdgeSize, "OpenMP Loop")
 {
-    omp_set_num_threads(4);
-    mTriangles.resize(4);
+    mTriangles.resize(omp_get_max_threads());
 }
 
 unsigned LoopMeshBuilder::marchCubes(const ParametricScalarField &field)
@@ -39,6 +38,8 @@ unsigned LoopMeshBuilder::marchCubes(const ParametricScalarField &field)
             Vec3_t<float> cubeOffset( i % mGridSize,
                                     (i / mGridSize) % mGridSize,
                                     i / (mGridSize*mGridSize));
+
+            //printf("Cube %f %f %f\n", cubeOffset.x, cubeOffset.y, cubeOffset.z);
 
             // 4. Evaluate "Marching Cube" at given position in the grid and
             //    store the number of triangles generated.

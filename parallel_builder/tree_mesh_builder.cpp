@@ -20,8 +20,7 @@
 TreeMeshBuilder::TreeMeshBuilder(unsigned gridEdgeSize)
     : BaseMeshBuilder(gridEdgeSize, "Octree")
 {
-    omp_set_num_threads(4);
-    mTriangles.resize(4);
+    mTriangles.resize(omp_get_max_threads());
 }
 
 unsigned TreeMeshBuilder::marchCubes(const ParametricScalarField &field)
@@ -38,47 +37,77 @@ unsigned TreeMeshBuilder::marchCubes(const ParametricScalarField &field)
         #pragma omp master
         {
             #pragma omp task firstprivate(mGridSize, field) shared(n)
-            n = proccessNode((0, 0, 0), (mGridSize, mGridSize, mGridSize), field);
+            n = proccessNode(0, 0, 0, mGridSize, mGridSize, mGridSize, field);
         }
-    }
 
-    triangles.insert(triangles.end(), mTriangles[omp_get_thread_num()].begin(), mTriangles[omp_get_thread_num()].end());
+        #pragma omp barrier
+        #pragma omp critical
+        triangles.insert(triangles.end(), mTriangles[omp_get_thread_num()].begin(), mTriangles[omp_get_thread_num()].end());
+    }
     
     return n;
 }
 
-unsigned TreeMeshBuilder::proccessNode(Vec3_t<float> from, Vec3_t<float> to, const ParametricScalarField &field) {
+unsigned TreeMeshBuilder::proccessNode(float from_x, float from_y, float from_z, float to_x, float to_y, float to_z, const ParametricScalarField field) {
 
-    Vec3_t<float> cubeCenter3d = (
-        (from.x + to.x) / 2,
-        (from.y + to.y) / 2,
-        (from.z + to.z) / 2
-    );
+    //printf("Called (%f, %f, %f) (%f, %f, %f)\n", from_x, from_y, from_z, to_x, to_y, to_z);
 
-    float size = to.x - from.x;
+    unsigned size = std::abs(to_x - from_x);
+    unsigned shift = size / 2;
 
-    if (size < 1) { //process node
-        return buildCube(cubeCenter3d, field);
+
+    if (size <= 10) { //process node
+
+        unsigned totalTriangles = 0;
+        unsigned cubesCount = size*size*size;
+
+        for(size_t i = 0; i < cubesCount; ++i) {
+            Vec3_t<float> cubeOffset = {
+                from_x + i % size,
+                from_y + (i / size) % size,
+                from_z + i / (size * size)
+            };
+
+            totalTriangles += buildCube(cubeOffset, field);
+        }
+
+        return totalTriangles;
     }
 
-    /*if (evaluateFieldAt(cubeCenter3d, field) <= (field.getIsoLevel() + sqrt3Half * size)) { //not in object
+    float halfSize = size / 2.0f;
+
+    Vec3_t<float> cubeCenter3d = {
+        (from_x + halfSize) * mGridResolution,
+        (from_y + halfSize) * mGridResolution,
+        (from_z + halfSize) * mGridResolution
+    };
+
+    if (evaluateFieldAt(cubeCenter3d, field) > (mIsoLevel + sqrt3Half * (size * mGridResolution))) { //not in object
+        //printf("Droping (%f, %f, %f)(%f, %f, %f)\n", cubeCenter3d.x, cubeCenter3d.y, cubeCenter3d.z, (to_x + from_x) / 2.0, (to_y + from_y) / 2.0, (to_z + from_z) / 2.0);
         return 0;
-    }*/
+    }
 
-    unsigned shift = size / 2;
-    unsigned res[8];
-
+    unsigned res = 0;
     for (unsigned i = 0; i < 8; i++) {
-        #pragma omp task firstprivate(from, to, i, shift, field) shared(res)
-        res[i] = proccessNode(
-            (from.x + shift * (i % 2 == 0), from.y + shift * (i % 4 == 0), from.z + shift * (i % 8 == 0)),
-            (to.x   - shift * (i % 2 != 0), to.y   - shift * (i % 4 != 0), to.z   - shift * (i % 8 != 0)),
-            field
-        );
+        #pragma omp task firstprivate(from_x, from_y, from_z, to_x, to_y, to_z, i, shift, field) shared(res)
+        {
+            #pragma omp atomic
+            res += proccessNode(
+                from_x + shift * (i % 2),
+                from_y + shift * (i % 4 > 1),
+                from_z + shift * (i > 3),
+
+                to_x   - shift * !(i % 2),
+                to_y   - shift * (i % 4 < 2),
+                to_z   - shift * (i < 4),
+
+                field
+            );
+        }
     }
 
     #pragma omp taskwait
-    return res[0] + res[1] + res[2] + res[3] + res[4] + res[5] + res[6] + res[7];
+    return res;
 }
 
 float TreeMeshBuilder::evaluateFieldAt(const Vec3_t<float> &pos, const ParametricScalarField &field)

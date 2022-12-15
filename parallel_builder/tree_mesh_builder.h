@@ -23,7 +23,7 @@ protected:
     unsigned marchCubes(const ParametricScalarField &field);
     float evaluateFieldAt(const Vec3_t<float> &pos, const ParametricScalarField &field);
     void emitTriangle(const Triangle_t &triangle);
-    unsigned proccessNode(Vec3_t<float> from, Vec3_t<float> to, const ParametricScalarField &field);
+    unsigned proccessNode(float from_x, float from_y, float from_z, float to_x, float to_y, float to_z, const ParametricScalarField field);
     const Triangle_t *getTrianglesArray() const { return triangles.data(); }
     
     std::vector<std::vector<Triangle_t>> mTriangles; ///< Temporary array of triangles
