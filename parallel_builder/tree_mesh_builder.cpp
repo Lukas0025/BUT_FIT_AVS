@@ -36,7 +36,7 @@ unsigned TreeMeshBuilder::marchCubes(const ParametricScalarField &field)
     {
         #pragma omp master
         {
-            #pragma omp task firstprivate(mGridSize, field) shared(n)
+            #pragma omp task shared(n)
             n = proccessNode(0, 0, 0, mGridSize, mGridSize, mGridSize, field);
         }
 
@@ -89,7 +89,7 @@ unsigned TreeMeshBuilder::proccessNode(float from_x, float from_y, float from_z,
 
     unsigned res = 0;
     for (unsigned i = 0; i < 8; i++) {
-        #pragma omp task firstprivate(from_x, from_y, from_z, to_x, to_y, to_z, i, shift, field) shared(res)
+        #pragma omp task shared(res)
         {
             #pragma omp atomic
             res += proccessNode(
