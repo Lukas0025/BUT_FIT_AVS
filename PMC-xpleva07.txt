@@ -1,0 +1,91 @@
+Architektury Výpočetních Systémů (AVS 2022)
+Projekt č. 2 (PMC)
+Login: xpleva07
+
+Úloha 1: Paralelizace původního řešení
+===============================================================================
+
+1) Kterou ze smyček (viz zadání) je vhodnější paralelizovat a co způsobuje 
+   neefektivitu paralelizaci té druhé?
+
+Nejvrchnější smyšku, nejvodnější pro paralelizaci je protože startování a ukončování paralelní 
+sekce je časově náročná úloha a proto je vhodné provádět tuto opreaci minimálně. Čím déle bude jedno vlánko naživu
+tím lepší bude efektivita algoritmu
+
+2) Jaké plánování (rozdělení práce mezi vlákna) jste zvolili a proč? 
+   Jaký vliv má velikost "chunk" při dynamickém plánování (8, 16, 32, 64)?
+
+Zvolil jsem plánování guided protože provedlo výpočet nejrychleji, protože ostatní vlákna nebudou spát když by jedno mělo pracoavat. 
+Vliv chunk byl takový že se zvěčujícím se čankem se zhoršoval čas výpočtu.
+
+3) Jakým způsobem zajišťujete ukládání trojúhelníků z několika vláken současně?
+
+Program obsahuje pole, které obsahuje vektory, které jsou rozděleny mezi vlákna. 
+Po dokončení dojde k sloučení tečhto vektorů do výsledného vektoru v kritické sekci
+
+Úloha 2: Paralelní průchod stromem
+===============================================================================
+
+1) Stručně popište použití OpenMP tasků ve vašem řešení.
+
+Task je vatvořen při každém rekurzivním volání funkce, která provede kotrolu prázdnosti bloku a pokračuje volávím sama sebe 8x (Tasky) 
+na konci funkce se čeká na dokončení všdch 8 tasků aby byl známy počet trojůhelníků
+
+2) Jaký vliv má na vaše řešení tzv. "cut-off"? Je vhodné vytvářet nový 
+   task pro každou krychli na nejnižší úrovni?
+
+Ne není vhodné spuštět tast pro kožnou krychli. Když budeme změtšovat velikost krichle kterou budeme dělat sekvečně,
+bude docházet k zlepšování rychlosti, do doby než se dostaneme k příliš velké kostce jejiž sekveční výpočet zastíní octree.
+ideální cut-off je někde uprostřed. 
+
+3) Jakým způsobem zajišťujete ukládání trojúhelníků z několika vláken současně?
+
+Program obsahuje pole, které obsahuje vektory, které jsou rozděleny mezi vlákna. 
+Po dokončení dojde k sloučení tečhto vektorů do výsledného vektoru v kritické sekci
+
+Úloha 3: Grafy škálování všech řešení
+===============================================================================
+
+1) Stručně zhodnoťte efektivitu vytvořených řešení (na základě grafů škálování).
+
+řešení s octree je lehce lépe škálovatelné než loop řesšení nicméně oba dva celkem dobře škálují.
+na obou grafech je vyďet že při zvýšení počtu vláken dojde k zkrácení času výpočtu. Na 2**5 procesů se začíná projevovat opačný jev a to především u octree.
+
+2) V jakém případě (v závislosti na počtu bodů ve vstupním souboru a velikosti 
+   mřížky) bude vaše řešení 1. úlohy neefektivní? (pokud takový případ existuje)
+
+Nejhoší případ pro implementaci je když velikost mřížky bude minimální možná (1x1) a
+počet budou bude maximální možný, potom se celý výpočet bude dělat na jednom vlákně.
+
+3) Je (nebo není) stromový algoritmus efektivnější z pohledu slabého škálování 
+   vzhledem ke vstupu?
+
+Ano je efektivnější než loop. Nicméně loop nejspíše bude lépe škálovat na více jádrech než bylo testostováno.
+
+4) Jaký je rozdíle mezi silným a slabým škálováním?
+
+Při silném škálování se distribuce úloh mění automaticky s rostoucím počtem vláken (Výpočetních prostředků), 
+zatímco při slabém škálování je distribuce úloh pevná a neměnná, 
+a výpočetní stroj se tak může efektivně využít pouze pro práci s daným počtem vláken.
+
+Úloha 4: Analýza využití jader pomocí VTune
+================================================================================
+
+1) Jaké bylo průměrné využití jader pro všechny tři implementace s omezením na 
+   18 vláken? Na kolik procent byly využity?
+   
+   ref:  2.8% (0.998 out of 36 logical CPUs)
+   loop: 48.3% (17.374 out of 36 logical CPUs)
+   tree: 46.2% (16.647 out of 36 logical CPUs)
+
+2) Jaké bylo průměrné využití jader pro všechny tři implementace s využitím 
+   všech jader? Na kolik procent se podařilo využít obě CPU?
+   
+   ref:  2.8% (0.998 out of 36 logical CPUs)
+   loop: 91.3% (32.886 out of 36 logical CPUs)
+   tree: 81.8% (29.440 out of 36 logical CPUs)
+
+3) Jaké jsou závěry z těchto měření?
+
+Plyne z toho že loop zvládne vytížit více vláken než tree a bude díky
+tomu efektivnější na obrovském počtuje vláken než tree.

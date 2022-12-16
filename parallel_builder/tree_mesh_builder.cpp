@@ -1,11 +1,11 @@
 /**
  * @file    tree_mesh_builder.cpp
  *
- * @author  FULL NAME <xlogin00@stud.fit.vutbr.cz>
+ * @author  Lukáš Plevač <xpleva07@stud.fit.vutbr.cz>
  *
  * @brief   Parallel Marching Cubes implementation using OpenMP tasks + octree early elimination
  *
- * @date    DATE
+ * @date    16.11.2022
  **/
 
 #include <iostream>
@@ -56,7 +56,7 @@ unsigned TreeMeshBuilder::proccessNode(float from_x, float from_y, float from_z,
     unsigned shift = size / 2;
 
 
-    if (size <= 10) { //process node
+    if (size <= 5) { //process node
 
         unsigned totalTriangles = 0;
         unsigned cubesCount = size*size*size;
